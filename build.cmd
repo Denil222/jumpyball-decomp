@@ -2,7 +2,6 @@
 setlocal
 set VCVARS=D:\VS\BuildTools\VC\Auxiliary\Build\vcvars32.bat
 set SDL=D:\vcpkg\installed\x86-windows
-set ASSETS=D:\extracted
 
 if not exist "%VCVARS%" echo missing %VCVARS% && exit /b 1
 if not exist "%SDL%\lib\SDL2.lib" echo missing %SDL%\lib\SDL2.lib && exit /b 1
@@ -18,15 +17,11 @@ if errorlevel 1 exit /b 1
 
 copy /y "%SDL%\bin\SDL2.dll" build\ >nul
 
-if exist "%ASSETS%\BITMAP" (
-    if not exist build\BITMAP mkdir build\BITMAP
-    copy /y "%ASSETS%\BITMAP\*.bmp" build\BITMAP\ >nul
-    if not exist build\Sounds mkdir build\Sounds
-    copy /y "%ASSETS%\Sounds\*.wav" build\Sounds\ >nul
-    if not exist build\Musics mkdir build\Musics
-    copy /y "%ASSETS%\Musics\*.tkm" build\Musics\ >nul
-) else (
-    echo WARNING: %ASSETS%\BITMAP not found - build\ will not be self-contained
-)
+if not exist build\BITMAP mkdir build\BITMAP
+copy /y BITMAP\*.bmp build\BITMAP\ >nul
+if not exist build\Sounds mkdir build\Sounds
+copy /y Sounds\*.wav build\Sounds\ >nul
+if not exist build\Musics mkdir build\Musics
+copy /y Musics\*.tkm build\Musics\ >nul
 
 echo BUILD OK: build\jumpyball.exe
