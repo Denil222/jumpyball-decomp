@@ -1,0 +1,14 @@
+build/
+dist/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.7z
+*.wav
+*.bmp
+*.tkm
+*.raw
+BITMAP/
+Sounds/
+Musics/
