@@ -2,6 +2,7 @@
 #include "jb_mod.h"
 
 #include <SDL.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 static SDL_Window   *jb_win;
@@ -24,6 +25,10 @@ int Platform_Init(int w, int h, int scale, const char *title)
         return 0;
     jb_ren = SDL_CreateRenderer(jb_win, -1,
                                 SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!jb_ren)
+        jb_ren = SDL_CreateRenderer(jb_win, -1, SDL_RENDERER_PRESENTVSYNC);
+    if (!jb_ren)
+        jb_ren = SDL_CreateRenderer(jb_win, -1, 0);
     if (!jb_ren)
         return 0;
     SDL_RenderSetLogicalSize(jb_ren, w, h);
@@ -436,6 +441,7 @@ const char *Platform_BasePath(void)
 
 void Platform_ShowError(const char *title, const char *text)
 {
+    fprintf(stderr, "%s: %s\n", title, text);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, text, jb_win);
 }
 

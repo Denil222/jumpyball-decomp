@@ -32,8 +32,14 @@ jobs:
       - name: Headless frame dump
         run: |
           cd build
+          ls
+          set +e
           SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
             timeout 60 ./jumpyball 1 frame.raw
+          rc=$?
+          set -e
+          echo "jumpyball exit code: $rc"
+          test "$rc" = 0
           expected=$((240 * 320 * 2))
           actual=$(stat -c%s frame.raw)
           test "$actual" = "$expected" || {
