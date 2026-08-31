@@ -15,7 +15,7 @@ int Mod_Period(int idx)
 {
     if (idx < 0) idx = 0;
     if (idx >= MOD_NOTES_ALL) idx = MOD_NOTES_ALL - 1;
-    return (int)(&jb_mod_period[0][0])[idx];
+    return (int)jb_mod_period[idx / JB_MOD_NOTES][idx % JB_MOD_NOTES];
 }
 
 unsigned int Mod_Step(int period)
