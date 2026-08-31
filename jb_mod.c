@@ -75,7 +75,7 @@ void Mod_Init(int out_rate)
     jb_M.step[0] = 0;
     for (p = 1; p <= MOD_STEPMAX; p++)
         jb_M.step[p] =
-            (unsigned int)((((long long)(MOD_CLOCK / p)) << 16) / out_rate);
+            (unsigned int)((double)(MOD_CLOCK / p) * 65536.0 / (double)out_rate);
 }
 
 /* jumpyball hss.dll hssSpeaker::updateModSFX 0x00104370 */
@@ -84,7 +84,7 @@ void Mod_SetTempo(void)
     int d = ((MOD_BASEFREQ << 8) / 0xac44) * jb_M.tickhz;
 
     if (d <= 0) d = 1;
-    jb_M.spt = (int)(((((long long)jb_M.outrate) << 16) / d) >> 8);
+    jb_M.spt = (int)(((unsigned int)jb_M.outrate << 8) / (unsigned int)d);
 }
 
 /* jumpyball hss.dll hssSpeaker::volumeMusics 0x0010567c */

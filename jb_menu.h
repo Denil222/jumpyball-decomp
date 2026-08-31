@@ -39,7 +39,8 @@ typedef struct {
 enum {
     JB_MENU_NONE,
     JB_MENU_PLAY,
-    JB_MENU_QUIT
+    JB_MENU_QUIT,
+    JB_MENU_KEYCONFIG
 };
 
 /* JumpyBall.exe Screen_Set 0x00013678 stores a to g_screen and b to

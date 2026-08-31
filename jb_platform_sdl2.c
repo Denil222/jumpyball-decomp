@@ -80,18 +80,60 @@ void Platform_Present(void)
     SDL_RenderPresent(jb_ren);
 }
 
+static int jb_keymap[JB_KEY_COUNT] = {
+    SDLK_LEFT, SDLK_RIGHT, SDLK_UP, SDLK_DOWN, SDLK_SPACE, SDLK_RETURN
+};
+
+#define JB_RAWQ 16
+
+static int jb_rawq[JB_RAWQ];
+static int jb_rawq_head;
+static int jb_rawq_tail;
+
 static int MapKey(SDL_Keycode code)
 {
-    switch (code) {
-    case SDLK_LEFT:   return JB_KEY_LEFT;
-    case SDLK_RIGHT:  return JB_KEY_RIGHT;
-    case SDLK_UP:     return JB_KEY_UP;
-    case SDLK_DOWN:   return JB_KEY_DOWN;
-    case SDLK_SPACE:  return JB_KEY_JUMP;
-    case SDLK_RETURN: return JB_KEY_MENU;
-    default:          return -1;
+    int k;
+
+    if ((int)code == JB_KEY_UNBOUND)
+        return -1;
+    for (k = 0; k < JB_KEY_COUNT; k++) {
+        if (jb_keymap[k] == (int)code)
+            return k;
     }
+    return -1;
 }
+
+int Platform_KeyBinding(int key)
+{
+    if (key < 0 || key >= JB_KEY_COUNT)
+        return JB_KEY_UNBOUND;
+    return jb_keymap[key];
+}
+
+void Platform_SetKeyBinding(int key, int code)
+{
+    if (key < 0 || key >= JB_KEY_COUNT)
+        return;
+    jb_keymap[key] = code;
+    jb_keys[key]   = 0;
+}
+
+int Platform_NextRawKey(void)
+{
+    int code;
+
+    if (jb_rawq_tail == jb_rawq_head)
+        return JB_KEY_UNBOUND;
+    code         = jb_rawq[jb_rawq_tail];
+    jb_rawq_tail = (jb_rawq_tail + 1) % JB_RAWQ;
+    return code;
+}
+
+void Platform_FlushRawKeys(void)
+{
+    jb_rawq_tail = jb_rawq_head;
+}
+
 int Platform_PollEvents(void)
 {
     SDL_Event ev;
@@ -106,6 +148,14 @@ int Platform_PollEvents(void)
             if (ev.key.keysym.sym == SDLK_ESCAPE) {
                 jb_running = 0;
                 break;
+            }
+            if (ev.key.repeat == 0) {
+                int next = (jb_rawq_head + 1) % JB_RAWQ;
+
+                if (next != jb_rawq_tail) {
+                    jb_rawq[jb_rawq_head] = (int)ev.key.keysym.sym;
+                    jb_rawq_head          = next;
+                }
             }
             k = MapKey(ev.key.keysym.sym);
             if (k >= 0)
@@ -378,7 +428,7 @@ const char *Platform_BasePath(void)
             SDL_strlcpy(path, sdl, sizeof path);
             SDL_free(sdl);
         } else {
-            SDL_strlcpy(path, ".\\", sizeof path);
+            SDL_strlcpy(path, "./", sizeof path);
         }
     }
     return path;

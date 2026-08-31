@@ -1,8 +1,9 @@
 #include "jb_assets.h"
+#include "jb_appassets.h"
 #include "jb_audio.h"
 #include "jb_ball.h"
-#include "jb_bmp.h"
 #include "jb_consts.h"
+#include "jb_keyconfig.h"
 #include "jb_level.h"
 #include "jb_menu.h"
 #include "jb_platform.h"
@@ -25,104 +26,18 @@
    0x00064940 is 0. */
 static const float jb_row_shift[JB_ROW_SHIFT_N] = { 0.0f };
 
-static jb_sprite jb_backdrop;
-static jb_sprite jb_backdrop_desert;
-static jb_sprite jb_map1;
-static jb_sprite jb_map2;
-static jb_sprite jb_map3;
-static jb_sprite jb_tex_water_h;
-static jb_sprite jb_tex_water_v;
-static jb_sprite jb_tex_ice_v;
-static jb_sprite jb_tex_sand_h;
-static jb_sprite jb_tex_sand_v;
-static jb_sprite jb_tex_mesh;
-static jb_sprite jb_tex_wood;
-static jb_sprite jb_tex_grass;
-static jb_sprite jb_tex_grass_h;
-static jb_sprite jb_sign_keep_off;
-static jb_sprite jb_ball;
-static jb_sprite jb_shadow;
-static jb_sprite jb_backdrop_menu;
-static jb_sprite jb_bar_thin;
-static jb_sprite jb_panel;
-static jb_sprite jb_title;
-static jb_sprite jb_button_narrow;
-static jb_sprite jb_button_wide;
-static jb_sprite jb_logo_small;
-
-static const struct {
-    int        res;
-    jb_sprite *spr;
-} jb_asset_table[] = {
-    { JB_RES_BACKDROP_ICE,    &jb_backdrop },
-    { JB_RES_BACKDROP_DESERT, &jb_backdrop_desert },
-    { JB_RES_LEVEL_MAP_1,     &jb_map1 },
-    { JB_RES_LEVEL_MAP_2,     &jb_map2 },
-    { JB_RES_LEVEL_MAP_3,     &jb_map3 },
-    { JB_RES_TEX_WATER_H,     &jb_tex_water_h },
-    { JB_RES_TEX_WATER_V,     &jb_tex_water_v },
-    { JB_RES_TEX_ICE_V,       &jb_tex_ice_v },
-    { JB_RES_TEX_SAND_H,      &jb_tex_sand_h },
-    { JB_RES_TEX_SAND_V,      &jb_tex_sand_v },
-    { JB_RES_TEX_MESH,        &jb_tex_mesh },
-    { JB_RES_TEX_WOOD,        &jb_tex_wood },
-    { JB_RES_TEX_GRASS,       &jb_tex_grass },
-    { JB_RES_TEX_GRASS_H,     &jb_tex_grass_h },
-    { JB_RES_SIGN_KEEP_OFF,   &jb_sign_keep_off },
-    { JB_RES_BALL_FRAMES,     &jb_ball },
-    { JB_RES_SHADOW,          &jb_shadow },
-    { JB_RES_BACKDROP_MENU,   &jb_backdrop_menu },
-    { JB_RES_BAR_THIN,        &jb_bar_thin },
-    { JB_RES_PANEL_GRADIENT,  &jb_panel },
-    { JB_RES_TITLE,           &jb_title },
-    { JB_RES_BUTTON_NARROW,   &jb_button_narrow },
-    { JB_RES_BUTTON_WIDE,     &jb_button_wide },
-    { JB_RES_LOGO_POCKETNEW_SMALL, &jb_logo_small }
-};
-
-#define JB_ASSET_N (int)(sizeof jb_asset_table / sizeof jb_asset_table[0])
-
 static jb_trackrow_ctx jb_ctx;
 static jb_track_state  jb_st;
 static jb_ball_state   jb_ball_st;
 static jb_player_state jb_pl;
 static jb_stage        jb_stg;
 static jb_menu         jb_m;
+static jb_keyconfig    jb_kc;
 static int             jb_key_prev[JB_KEY_COUNT];
 
 /* JumpyBall.exe Game_Init 0x000113bc leaves g_appMode 0x00064a24 at 1 through
    the first Screen_Set 0x00013678. */
 static int jb_mode = JB_MODE_MENU;
-
-static int LoadAll(const jb_surface *dst)
-{
-    int i;
-
-    for (i = 0; i < JB_ASSET_N; i++) {
-        const char *path = Assets_Bitmap(jb_asset_table[i].res);
-
-        if (!Bmp_LoadSprite(dst, path, jb_asset_table[i].spr)) {
-            char msg[JB_MSG_MAX];
-
-            snprintf(msg, sizeof msg,
-                     "Bitmap missing or unreadable:\n\n%s\n\n"
-                     "Copy the whole BITMAP folder next to jumpyball.exe.",
-                     path);
-            Platform_ShowError("JumpyBall", msg);
-            return 0;
-        }
-    }
-    return 1;
-}
-
-static void FreeAll(void)
-{
-    int i;
-
-    for (i = 0; i < JB_ASSET_N; i++)
-        Bmp_FreeSprite(jb_asset_table[i].spr);
-    Font_Free();
-}
 
 /* JumpyBall.exe Track_DrawFrame 0x0001dd54 at 0x0001e9bc draws the HUD while
    g_layoutMode 0x00064938 is 0, with the ":" literal at 0x000269a4. */
@@ -170,7 +85,8 @@ static void BeginLevel(int level, unsigned ticks)
        before it clears g_timeSec. */
     Audio_MusicPlay(JB_MUS_GAME);
     Stage_Begin(&jb_stg, level, ticks);
-    Level_LoadTileMap(jb_ctx.screen, jb_stg.level, &jb_map1, &jb_map2, &jb_map3);
+    Level_LoadTileMap(jb_ctx.screen, jb_stg.level, &jb_a.map1, &jb_a.map2,
+                      &jb_a.map3);
     Player_Respawn(&jb_pl);
     /* JumpyBall.exe Player_Respawn 0x00012f18 calls Font_Load 0x0001f4d8 with 2. */
     Font_Select(jb_ctx.screen, 2);
@@ -264,7 +180,7 @@ int main(int argc, char **argv)
         char msg[JB_MSG_MAX];
 
         snprintf(msg, sizeof msg,
-                 "JumpyBall cannot find its assets.\n\nLooked for BITMAP\\%d.bmp in:\n%s\n"
+                 "JumpyBall cannot find its assets.\n\nLooked for BITMAP/%d.bmp in:\n%s\n"
                  "Copy the BITMAP and Sounds folders next to jumpyball.exe,\n"
                  "or set JUMPYBALL_ASSETS to the folder that holds them.",
                  JB_RES_FONT, Assets_FailureText());
@@ -283,8 +199,8 @@ int main(int argc, char **argv)
     Track_BuildProjTables();
     Gfx_BuildTexVStep();
 
-    if (!LoadAll(back)) {
-        FreeAll();
+    if (!AppAssets_Load(back)) {
+        AppAssets_Free();
         Platform_Shutdown();
         return 1;
     }
@@ -295,26 +211,26 @@ int main(int argc, char **argv)
         char msg[JB_MSG_MAX];
 
         snprintf(msg, sizeof msg,
-                 "Font bitmaps missing or unreadable:\n\n%sBITMAP\\%d.bmp\n"
-                 "%sBITMAP\\%d.bmp",
+                 "Font bitmaps missing or unreadable:\n\n%sBITMAP/%d.bmp\n"
+                 "%sBITMAP/%d.bmp",
                  Assets_Root(), JB_RES_FONT, Assets_Root(), JB_RES_FONT_LARGE);
         Platform_ShowError("JumpyBall", msg);
-        FreeAll();
+        AppAssets_Free();
         Platform_Shutdown();
         return 1;
     }
 
     jb_ctx.screen      = back;
-    jb_ctx.tex_water_h = &jb_tex_water_h;
-    jb_ctx.tex_water_v = &jb_tex_water_v;
-    jb_ctx.tex_ice_v   = &jb_tex_ice_v;
-    jb_ctx.tex_sand_h  = &jb_tex_sand_h;
-    jb_ctx.tex_sand_v  = &jb_tex_sand_v;
-    jb_ctx.tex_mesh    = &jb_tex_mesh;
-    jb_ctx.tex_wood    = &jb_tex_wood;
-    jb_ctx.tex_grass   = &jb_tex_grass;
-    jb_ctx.tex_grass_h = &jb_tex_grass_h;
-    jb_ctx.spr_sign_keep_off = &jb_sign_keep_off;
+    jb_ctx.tex_water_h = &jb_a.tex_water_h;
+    jb_ctx.tex_water_v = &jb_a.tex_water_v;
+    jb_ctx.tex_ice_v   = &jb_a.tex_ice_v;
+    jb_ctx.tex_sand_h  = &jb_a.tex_sand_h;
+    jb_ctx.tex_sand_v  = &jb_a.tex_sand_v;
+    jb_ctx.tex_mesh    = &jb_a.tex_mesh;
+    jb_ctx.tex_wood    = &jb_a.tex_wood;
+    jb_ctx.tex_grass   = &jb_a.tex_grass;
+    jb_ctx.tex_grass_h = &jb_a.tex_grass_h;
+    jb_ctx.spr_sign_keep_off = &jb_a.sign_keep_off;
 
     /* JumpyBall.exe Game_Init 0x000113bc at 0x00011d10 sets DAT_00064b18 to
        Color_Pack16If16bpp(g_screen 0x00061b10, 0x800080), and
@@ -344,8 +260,8 @@ int main(int argc, char **argv)
     /* JumpyBall.exe Level_Begin 0x0001376c stores 0 to g_hudR 0x00026280,
        g_hudG 0x00026284 and g_hudB 0x00026288 while g_theme 0x00026370 is 0. */
     jb_ball_st.screen          = back;
-    jb_ball_st.spr_shadow      = &jb_shadow;
-    jb_ball_st.spr_ball_frames = &jb_ball;
+    jb_ball_st.spr_shadow      = &jb_a.shadow;
+    jb_ball_st.spr_ball_frames = &jb_a.ball;
     jb_ball_st.hud_r           = 0;
     jb_ball_st.hud_g           = 0;
     jb_ball_st.hud_b           = 0;
@@ -354,13 +270,13 @@ int main(int argc, char **argv)
     jb_ball_st.view_center_x   = JB_VIEW_CENTER_X;
 
     jb_m.screen        = back;
-    jb_m.backdrop      = &jb_backdrop_menu;
-    jb_m.bar_thin      = &jb_bar_thin;
-    jb_m.panel         = &jb_panel;
-    jb_m.title         = &jb_title;
-    jb_m.button_narrow = &jb_button_narrow;
-    jb_m.button_wide   = &jb_button_wide;
-    jb_m.logo_small    = &jb_logo_small;
+    jb_m.backdrop      = &jb_a.backdrop_menu;
+    jb_m.bar_thin      = &jb_a.bar_thin;
+    jb_m.panel         = &jb_a.panel;
+    jb_m.title         = &jb_a.title;
+    jb_m.button_narrow = &jb_a.button_narrow;
+    jb_m.button_wide   = &jb_a.button_wide;
+    jb_m.logo_small    = &jb_a.logo_small;
     jb_m.key           = jb_ctx.sign_key;
     jb_m.view_w        = JB_VIEW_W;
     jb_m.view_h        = JB_VIEW_H;
@@ -368,6 +284,16 @@ int main(int argc, char **argv)
     jb_m.layout_mode   = JB_LAYOUT_240x320;
     jb_m.max_unlocked  = jb_stg.max_unlocked;
     jb_m.auto_jump     = jb_pl.auto_jump;
+
+    jb_kc.screen        = back;
+    jb_kc.panel         = &jb_a.keyconfig_panel;
+    jb_kc.key           = jb_ctx.sign_key;
+    jb_kc.view_w        = JB_VIEW_W;
+    jb_kc.view_h        = JB_VIEW_H;
+    jb_kc.view_center_x = JB_VIEW_CENTER_X;
+    jb_kc.active        = 0;
+    jb_kc.step          = 0;
+    KeyConfig_Load();
 
     prev_ticks = Platform_Ticks();
     if (start_level >= 0) {
@@ -386,15 +312,33 @@ int main(int argc, char **argv)
         dt         = (float)(ticks - prev_ticks) * 0.001f;
         prev_ticks = ticks;
 
-        act = PumpKeys();
-        if (act == JB_MENU_QUIT)
-            break;
-        if (act == JB_MENU_PLAY) {
-            jb_mode         = JB_MODE_GAME;
-            jb_pl.auto_jump = jb_m.auto_jump;
-            ticks           = Platform_Ticks();
-            prev_ticks      = ticks;
-            BeginLevel(jb_m.index, ticks);
+        /* jumpyball JumpyBall.exe WndProc 0x0001fd2c tests g_inKeyConfig before
+           the g_appMode dispatch and returns straight after the wizard store. */
+        if (jb_kc.active) {
+            int code;
+
+            while (jb_kc.active &&
+                   (code = Platform_NextRawKey()) != JB_KEY_UNBOUND)
+                KeyConfig_KeyDown(&jb_kc, code);
+
+            if (!jb_kc.active) {
+                for (i = 0; i < JB_KEY_COUNT; i++)
+                    jb_key_prev[i] = Platform_KeyDown(i) ? 1 : 0;
+                Platform_FlushRawKeys();
+            }
+        } else {
+            act = PumpKeys();
+            if (act == JB_MENU_QUIT)
+                break;
+            if (act == JB_MENU_KEYCONFIG)
+                KeyConfig_Begin(&jb_kc);
+            if (act == JB_MENU_PLAY) {
+                jb_mode         = JB_MODE_GAME;
+                jb_pl.auto_jump = jb_m.auto_jump;
+                ticks           = Platform_Ticks();
+                prev_ticks      = ticks;
+                BeginLevel(jb_m.index, ticks);
+            }
         }
 
         if (jb_mode == JB_MODE_GAME) {
@@ -428,7 +372,9 @@ int main(int argc, char **argv)
             }
         }
 
-        if (jb_mode == JB_MODE_MENU) {
+        if (jb_kc.active) {
+            KeyConfig_DrawFrame(&jb_kc);
+        } else if (jb_mode == JB_MODE_MENU) {
             Menu_DrawFrame(&jb_m);
         } else {
             jb_st.cam_row       = jb_pl.cam_row;
@@ -442,7 +388,7 @@ int main(int argc, char **argv)
                bitmap LoadBitmapW picked for g_theme 0x00064944. */
             Blit_NoKey(back, 0, 0, JB_VIEW_W, JB_VIEW_H,
                        (jb_stg.backdrop_res == JB_RES_BACKDROP_DESERT)
-                           ? &jb_backdrop_desert : &jb_backdrop, 0, 0);
+                           ? &jb_a.backdrop_desert : &jb_a.backdrop_ice, 0, 0);
 
             Track_DrawFrame(&jb_st, DrawRow, &jb_ctx);
 
@@ -468,7 +414,7 @@ int main(int argc, char **argv)
             break;
         }
     }
-    FreeAll();
+    AppAssets_Free();
     Platform_Shutdown();
     return 0;
 }

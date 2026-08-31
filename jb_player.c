@@ -160,7 +160,7 @@ static void StepMotion(jb_player_state *st, float dt)
         if (st->auto_jump == 1 && st->ball_y == 0.0f)
             st->vel_y = JB_JUMP_IMPULSE;
         else
-            st->fall_flag = 0;
+            st->fall_flag = 1;
     }
 
     /* JumpyBall.exe WndProc 0x00021028 "mov r2,#0x0; mov r3,#0x0" makes the

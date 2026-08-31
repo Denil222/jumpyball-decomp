@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     unsigned char *buf;
     short         *pcm;
     int            frames = RATE * SECONDS, i, vol;
-    long long      sum = 0;
+    double         sum = 0.0;
     int            peak = 0, nonzero = 0, last = 0;
 
     if (argc < 3) {
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     for (i = 0; i < frames; i++) {
         int v = pcm[i] < 0 ? -pcm[i] : pcm[i];
 
-        sum += (long long)pcm[i] * pcm[i];
+        sum += (double)pcm[i] * (double)pcm[i];
         if (v > peak)
             peak = v;
         if (pcm[i] != 0) {
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
     printf("  rendered %d frames (%d s)  peak %d  rms %.1f  nonzero %.2f%%  "
            "last audio at %.2f s\n",
            frames, SECONDS, peak,
-           frames ? (double)((long long)(sum / frames)) : 0.0,
+           frames ? (double)(long)(sum / frames) : 0.0,
            100.0 * nonzero / frames, (double)last / RATE);
     printf("  %s\n", peak > 1000 && nonzero * 10 > frames ? "PASS" : "FAIL");
     return 0;

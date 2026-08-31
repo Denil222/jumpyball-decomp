@@ -276,6 +276,8 @@ static int Confirm(jb_menu *m)
             Audio_VolumeStep(1);
         else if (m->index == 1)
             m->auto_jump = 1 - m->auto_jump;
+        else if (m->index == 2)
+            return JB_MENU_KEYCONFIG;
         else if (m->index == 3)
             Menu_ScreenSet(m, JB_SCREEN_MAIN, 0);
         break;

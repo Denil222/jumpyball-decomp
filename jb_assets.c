@@ -43,11 +43,11 @@ static int TryRoot(const char *base, const char *sub)
     n = strlen(jb_root);
     if (n > 0 && jb_root[n - 1] != '\\' && jb_root[n - 1] != '/' &&
         n + 1 < sizeof jb_root) {
-        jb_root[n]     = '\\';
+        jb_root[n]     = '/';
         jb_root[n + 1] = '\0';
     }
 
-    snprintf(probe, sizeof probe, "%sBITMAP\\%d.bmp", jb_root, JB_RES_FONT);
+    snprintf(probe, sizeof probe, "%sBITMAP/%d.bmp", jb_root, JB_RES_FONT);
     if (FileExists(probe))
         return 1;
 
@@ -68,7 +68,7 @@ int Assets_Init(void)
         return 1;
     if (TryRoot(base, ""))
         return 1;
-    if (TryRoot(base, "assets\\"))
+    if (TryRoot(base, "assets/"))
         return 1;
     return 0;
 }
@@ -85,19 +85,19 @@ const char *Assets_FailureText(void)
 
 const char *Assets_Bitmap(int res)
 {
-    snprintf(jb_path, sizeof jb_path, "%sBITMAP\\%d.bmp", jb_root, res);
+    snprintf(jb_path, sizeof jb_path, "%sBITMAP/%d.bmp", jb_root, res);
     return jb_path;
 }
 
 const char *Assets_Sound(const char *name)
 {
-    snprintf(jb_path, sizeof jb_path, "%sSounds\\%s", jb_root, name);
+    snprintf(jb_path, sizeof jb_path, "%sSounds/%s", jb_root, name);
     return jb_path;
 }
 
 /* jumpyball JumpyBall.exe Music_LoadForContext 0x0001db68 */
 const char *Assets_Music(const char *name)
 {
-    snprintf(jb_path, sizeof jb_path, "%sMusics\\%s", jb_root, name);
+    snprintf(jb_path, sizeof jb_path, "%sMusics/%s", jb_root, name);
     return jb_path;
 }

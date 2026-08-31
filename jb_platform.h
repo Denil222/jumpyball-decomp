@@ -29,6 +29,18 @@ int Platform_PollEvents(void);
 
 int Platform_KeyDown(int key);
 
+/* jumpyball JumpyBall.exe WndProc 0x0001fd2c compares the incoming VK code
+   against g_keyLeft, g_keyRight, g_keyUp, g_keyDown, g_keyJump and g_keyMenu;
+   the key-config wizard in the same function writes those six slots. */
+#define JB_KEY_UNBOUND 0
+
+int Platform_KeyBinding(int key);
+void Platform_SetKeyBinding(int key, int code);
+
+/* jumpyball JumpyBall.exe WndProc 0x0001fd2c binds on WM_KEYDOWN. */
+int Platform_NextRawKey(void);
+void Platform_FlushRawKeys(void);
+
 unsigned Platform_Ticks(void);
 
 void Platform_Delay(unsigned ms);

@@ -150,6 +150,10 @@ enum jb_theme {
 #define JB_RES_BUTTON_WIDE          251
 #define JB_RES_LOGO_POCKETNEW_SMALL 253
 
+/* jumpyball JumpyBall.exe KeyConfig_Tick 0x0001f900 blits the sprite
+   LoadBitmapW(g_hInstance, 0xcc) loaded. */
+#define JB_RES_KEYCONFIG_PANEL 204
+
 #define JB_HUD_BRIGHT 250 /* JumpyBall.exe 0x00026280 g_hudR */
 
 #define JB_MODE_GAME 0 /* JumpyBall.exe 0x00026340 g_appMode */

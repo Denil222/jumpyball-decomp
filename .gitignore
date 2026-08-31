@@ -1,7 +1,9 @@
 build/
+build-cmake/
 dist/
 *.obj
 *.exe
 *.pdb
 *.ilk
 *.7z
+keys.cfg
