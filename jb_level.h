@@ -15,6 +15,10 @@ extern unsigned char jb_tile_grid[JB_GRID_ALLOC_ROWS * JB_MAP_COLS];
 extern int jb_checkpoint_x[JB_CHECKPOINT_N];
 extern int jb_checkpoint_y[JB_CHECKPOINT_N];
 
+/* JumpyBall.exe Level_LoadTileMap 0x000126a4 "addeq r10,r10,#0x1" leaves r10 as
+   the number of red pixels written. */
+extern int jb_checkpoint_n;
+
 /* JumpyBall.exe Level_LoadTileMap 0x0001261c reads g_levelMap1 0x00061c74 at
    0x00012634, g_levelMap2 0x00061d10 at 0x0001264c and g_levelMap3 0x00061d14
    at 0x00012658, and takes the source row stride from g_levelMap1 for all three

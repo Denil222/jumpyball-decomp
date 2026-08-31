@@ -65,6 +65,12 @@ typedef struct {
     /* JumpyBall.exe WndProc 0x00020f74 indexes (&DAT_00031180), which is
        g_tileGrid 0x00031178 + 8. */
     const unsigned char *tile_grid;
+
+    /* JumpyBall.exe Player_Respawn 0x00012ff0 reads g_checkpointY 0x000611e8 and
+       0x00013008 reads g_checkpointX 0x000612b0, both from index 1. */
+    const int *checkpoint_x;
+    const int *checkpoint_y;
+    const int *checkpoint_n;
 } jb_player_state;
 
 /* JumpyBall.exe Player_Respawn 0x00012f18, the stores at 0x00012f2c..0x00013024. */

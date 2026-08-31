@@ -1,5 +1,5 @@
 #include "jb_text.h"
-
+#include <stddef.h>
 #include "jb_assets.h"
 #include "jb_bmp.h"
 #include "jb_consts.h"

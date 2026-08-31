@@ -3,6 +3,30 @@
 #include "jb_consts.h"
 #include "jb_platform.h"
 
+/* JumpyBall.exe Player_Respawn: 0x00012fd8 "cmp r0,#0x46" with ble, 0x00012fe4
+   "sub r1,r0,#0x14" off g_camRow 0x000649b8, 0x00012ff0 "ldr r3,[r0,#0x4]" at
+   g_checkpointY 0x000611e8, 0x000130a0 "cmp r10,r3" with blt. */
+static void PlaceAtCheckpoint(jb_player_state *st)
+{
+    int limit = st->cam_row - 0x14;
+    int k;
+
+    if (st->cam_row <= 0x46)
+        return;
+
+    for (k = 1; k <= *st->checkpoint_n; k++) {
+        if (st->checkpoint_y[k] >= limit)
+            break;
+
+        /* JumpyBall.exe Player_Respawn 0x0001300c "rsb r0,r3,#0x8" then __subd
+           at 0x00013038 with the mov/orr pair 0x3fe00000 0x00000000 = 0.5, and
+           0x00013078 __subd with the pool words [0x00013128] 0x3fc99999 and
+           [0x0001312c] 0x9999999a = 0.2. */
+        st->ball_x   = (float)(8 - st->checkpoint_x[k]) - 0.5f;
+        st->ball_row = (float)st->checkpoint_y[k] - 0.2f;
+    }
+}
+
 /* JumpyBall.exe Player_Respawn 0x00012f18, the stores at 0x00012f2c..0x00013024. */
 void Player_Respawn(jb_player_state *st)
 {
@@ -13,6 +37,7 @@ void Player_Respawn(jb_player_state *st)
     st->ball_y         = 5.0f;
     st->ball_x         = 0.0f;
     st->ball_row       = 0.0f;
+    PlaceAtCheckpoint(st);
     st->vel_y          = -1.0f;
     st->vel_x          = 0.0f;
     st->vel_z          = 0.0f;
@@ -20,8 +45,12 @@ void Player_Respawn(jb_player_state *st)
     st->right_down     = 0;
     st->up_down        = 0;
     st->down_down      = 0;
-    st->cam_row        = 0;
-    st->cam_pixel_ofs  = 0.0f;
+
+    /* JumpyBall.exe Player_Respawn 0x00012f18 writes neither g_camRow 0x000649b8
+       nor g_camPixelOfs 0x00061a14; WndProc 0x0001fd2c derives both from
+       g_ballRow 0x00064b08 with __stoi on the next WM_TIMER 0x113. */
+    st->cam_row       = (int)st->ball_row;
+    st->cam_pixel_ofs = (st->ball_row - (float)st->cam_row) * (float)JB_ROW_PIXELS;
 }
 
 void Player_KeyDown(jb_player_state *st, int key)

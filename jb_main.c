@@ -85,6 +85,9 @@ static void BeginLevel(int level, unsigned ticks)
        before it clears g_timeSec. */
     Audio_MusicPlay(JB_MUS_GAME);
     Stage_Begin(&jb_stg, level, ticks);
+    /* JumpyBall.exe Level_Begin 0x0001376c stores 0 to g_camRow 0x000649b8 ahead
+       of its Level_LoadTileMap 0x0001261c call. */
+    jb_pl.cam_row = 0;
     Level_LoadTileMap(jb_ctx.screen, jb_stg.level, &jb_a.map1, &jb_a.map2,
                       &jb_a.map3);
     Player_Respawn(&jb_pl);
@@ -254,6 +257,9 @@ int main(int argc, char **argv)
     jb_pl.auto_jump     = 1;
     jb_pl.map_cols      = JB_MAP_COLS;
     jb_pl.tile_grid     = jb_tile_grid;
+    jb_pl.checkpoint_x  = jb_checkpoint_x;
+    jb_pl.checkpoint_y  = jb_checkpoint_y;
+    jb_pl.checkpoint_n  = &jb_checkpoint_n;
     jb_pl.z_axis_damped = 0;
     Player_Respawn(&jb_pl);
 

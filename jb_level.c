@@ -3,6 +3,7 @@
 unsigned char jb_tile_grid[JB_GRID_ALLOC_ROWS * JB_MAP_COLS];
 int           jb_checkpoint_x[JB_CHECKPOINT_N];
 int           jb_checkpoint_y[JB_CHECKPOINT_N];
+int           jb_checkpoint_n;
 
 /* JumpyBall.exe Level_LoadTileMap 0x0001261c. */
 void Level_LoadTileMap(const jb_surface *screen, int level,
@@ -13,6 +14,8 @@ void Level_LoadTileMap(const jb_surface *screen, int level,
     unsigned char  *dst   = jb_tile_grid;
     int             found = 0;
     int             row, col;
+
+    jb_checkpoint_n = 0;
 
     /* JumpyBall.exe Level_LoadTileMap 0x00012628 "cmp r0,#0x0", 0x00012648
        "cmp r0,#0x1" and 0x00012654 "cmp r0,#0x2" with ldrge. */
@@ -50,4 +53,6 @@ void Level_LoadTileMap(const jb_surface *screen, int level,
         dst += JB_MAP_COLS;
         src += map1->w;
     }
+
+    jb_checkpoint_n = (found < JB_CHECKPOINT_N) ? found : JB_CHECKPOINT_N - 1;
 }
