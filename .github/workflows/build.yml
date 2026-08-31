@@ -1,0 +1,76 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDL2
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev
+
+      - name: Strict C89 conformance
+        run: |
+          sdl=$(pkg-config --cflags sdl2 | sed 's/-I/-isystem /g')
+          for f in *.c; do
+            gcc -std=c89 -pedantic-errors -Wall -Wextra $sdl -c "$f" -o /dev/null
+          done
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+
+      - name: Headless frame dump
+        run: |
+          cd build
+          SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
+            timeout 60 ./jumpyball 1 frame.raw
+          expected=$((240 * 320 * 2))
+          actual=$(stat -c%s frame.raw)
+          test "$actual" = "$expected" || {
+            echo "frame.raw is $actual bytes, expected $expected"
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jumpyball-linux
+          path: |
+            build/jumpyball
+            build/BITMAP
+            build/Sounds
+            build/Musics
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDL2
+        run: vcpkg install sdl2:x86-windows
+
+      - name: Build
+        run: |
+          cmake -S . -B build -A Win32 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x86-windows
+          cmake --build build --config Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jumpyball-windows
+          path: |
+            build/Release/jumpyball.exe
+            build/Release/SDL2.dll
+            build/Release/BITMAP
+            build/Release/Sounds
+            build/Release/Musics
