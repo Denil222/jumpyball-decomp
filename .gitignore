@@ -1,5 +1,6 @@
 build/
 build-cmake/
+build-android/
 dist/
 *.obj
 *.exe
