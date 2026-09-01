@@ -8,7 +8,15 @@ on:
 
 jobs:
   linux:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +40,6 @@ jobs:
       - name: Headless frame dump
         run: |
           cd build
-          ls
           set +e
           SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy \
             timeout 60 ./jumpyball 1 frame.raw
@@ -49,7 +56,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: jumpyball-linux
+          name: jumpyball-linux-${{ matrix.arch }}
           path: |
             build/jumpyball
             build/BITMAP
@@ -57,23 +64,50 @@ jobs:
             build/Musics
 
   windows:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            arch: x86
+            platform: Win32
+            triplet: x86-windows
+          - runner: windows-11-arm
+            arch: arm64
+            platform: ARM64
+            triplet: arm64-windows
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Install SDL2
-        run: vcpkg install sdl2:x86-windows
+        run: vcpkg install sdl2:${{ matrix.triplet }}
 
       - name: Build
         run: |
-          cmake -S . -B build -A Win32 `
+          cmake -S . -B build -A ${{ matrix.platform }} `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=x86-windows
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
           cmake --build build --config Release
+
+      - name: Headless frame dump
+        run: |
+          cd build/Release
+          $env:SDL_VIDEODRIVER = 'dummy'
+          $env:SDL_AUDIODRIVER = 'dummy'
+          $p = Start-Process .\jumpyball.exe -ArgumentList '1','frame.raw' -Wait -PassThru
+          "jumpyball exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { exit 1 }
+          $expected = 240 * 320 * 2
+          $actual = (Get-Item frame.raw).Length
+          if ($actual -ne $expected) {
+            "frame.raw is $actual bytes, expected $expected"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: jumpyball-windows
+          name: jumpyball-windows-${{ matrix.arch }}
           path: |
             build/Release/jumpyball.exe
             build/Release/SDL2.dll
