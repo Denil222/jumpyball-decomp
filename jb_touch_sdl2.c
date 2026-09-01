@@ -47,11 +47,12 @@ void Touch_Layout(int win_w, int win_h, int game_w, int game_h)
     jb_win_w = win_w;
     jb_win_h = win_h;
 
-    pad_h = win_h / 3;
-    if (pad_h < 96)
-        pad_h = 96;
-    if (pad_h > win_h / 2)
-        pad_h = win_h / 2;
+    cell = (win_w < win_h ? win_w : win_h) / 7;
+    if (cell > win_h / 9)
+        cell = win_h / 9;
+    margin = cell / 4;
+    side   = cell + cell / 2;
+    pad_h  = 3 * cell + 2 * margin;
     view_h = win_h - pad_h;
 
     gw = win_w;
@@ -64,10 +65,6 @@ void Touch_Layout(int win_w, int win_h, int game_w, int game_h)
     jb_game.y = (view_h - gh) / 2;
     jb_game.w = gw;
     jb_game.h = gh;
-
-    cell   = pad_h / 3;
-    margin = pad_h / 12;
-    side   = cell + cell / 2;
 
     SetRect(JB_KEY_UP, margin + cell, view_h, cell, cell);
     SetRect(JB_KEY_LEFT, margin, view_h + cell, cell, cell);

@@ -6,9 +6,10 @@ SDL_DIR=SDL2-$SDL_VERSION
 SDL_TARBALL=$SDL_DIR.tar.gz
 SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/$SDL_TARBALL
 APP_ID=io.github.katamaran21.jumpyball
-VERSION_CODE=2
-VERSION_NAME=1.1
+VERSION_CODE=3
+VERSION_NAME=1.2
 MIN_SDK=21
+APP_ABI="armeabi-v7a arm64-v8a x86 x86_64"
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 work=$root/build-android
@@ -52,6 +53,7 @@ sed -i "s|^\( *\)versionCode .*|\1versionCode $VERSION_CODE|;s|^\( *\)versionNam
 
 sed -i "s|minSdkVersion [0-9]*|minSdkVersion $MIN_SDK|;s|APP_PLATFORM=android-[0-9]*|APP_PLATFORM=android-$MIN_SDK|" "$app/build.gradle"
 sed -i "s|APP_PLATFORM=android-[0-9]*|APP_PLATFORM=android-$MIN_SDK|" "$app/jni/Application.mk"
+sed -i "s|^APP_ABI := .*|APP_ABI := $APP_ABI|" "$app/jni/Application.mk"
 
 ndk=${ANDROID_NDK_HOME:-${ANDROID_NDK_ROOT:-${ANDROID_NDK_LATEST_HOME:-}}}
 if [ -n "$ndk" ] && ! grep -q ndkPath "$app/build.gradle"; then
