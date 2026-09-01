@@ -24,6 +24,8 @@ int Platform_Init(int w, int h, int scale, const char *title)
     jb_touch = 1;
 #else
     jb_touch = SDL_getenv("JUMPYBALL_TOUCH") != NULL;
+    if (jb_touch)
+        SDL_SetHint(SDL_HINT_MOUSE_TOUCH_EVENTS, "1");
 #endif
     jb_win = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                               w * scale, h * scale, jb_touch ? SDL_WINDOW_RESIZABLE : 0);
