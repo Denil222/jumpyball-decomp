@@ -15,6 +15,7 @@ set(JUMPYBALL_SOURCES
     jb_appassets.c
     jb_assets.c
     jb_audio.c
+    jb_audio_sdl2.c
     jb_ball.c
     jb_bmp.c
     jb_gfx.c
@@ -29,6 +30,7 @@ set(JUMPYBALL_SOURCES
     jb_player.c
     jb_stage.c
     jb_text.c
+    jb_touch_sdl2.c
     jb_track.c
     jb_trackrow_forest.c
     jb_trackrow_grass.c

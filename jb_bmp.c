@@ -1,6 +1,7 @@
 #include "jb_bmp.h"
 
-#include <stdio.h>
+#include "jb_platform.h"
+
 #include <stdlib.h>
 
 static unsigned Rd16(const unsigned char *p)
@@ -14,38 +15,6 @@ static unsigned Rd32(const unsigned char *p)
            ((unsigned)p[2] << 16) | ((unsigned)p[3] << 24);
 }
 
-static unsigned char *SlurpFile(const char *path, long *out_len)
-{
-    FILE *fp;
-    long len;
-    unsigned char *buf;
-
-    fp = fopen(path, "rb");
-    if (!fp)
-        return NULL;
-    if (fseek(fp, 0, SEEK_END) != 0) {
-        fclose(fp);
-        return NULL;
-    }
-    len = ftell(fp);
-    if (len < 54 || fseek(fp, 0, SEEK_SET) != 0) {
-        fclose(fp);
-        return NULL;
-    }
-    buf = (unsigned char *)malloc((size_t)len);
-    if (!buf) {
-        fclose(fp);
-        return NULL;
-    }
-    if (fread(buf, 1, (size_t)len, fp) != (size_t)len) {
-        free(buf);
-        fclose(fp);
-        return NULL;
-    }
-    fclose(fp);
-    *out_len = len;
-    return buf;
-}
 static uint32_t Indexed(const unsigned char *pal, unsigned idx)
 {
     return ((uint32_t)pal[idx * 4] << 16) | ((uint32_t)pal[idx * 4 + 1] << 8) |
@@ -70,10 +39,10 @@ int Bmp_LoadSprite(const jb_surface *dst, const char *path, jb_sprite *out)
     int w, h, x, y, top_down;
     uint16_t *px;
 
-    f = SlurpFile(path, &len);
+    f = Platform_ReadFile(path, &len);
     if (!f)
         return 0;
-    if (f[0] != 'B' || f[1] != 'M') {
+    if (len < 54 || f[0] != 'B' || f[1] != 'M') {
         free(f);
         return 0;
     }

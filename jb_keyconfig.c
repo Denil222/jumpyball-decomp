@@ -10,7 +10,7 @@ static const char *KeysPath(void)
 {
     static char path[512];
 
-    snprintf(path, sizeof path, "%s%s", Platform_BasePath(), JB_KEYS_FILE);
+    snprintf(path, sizeof path, "%s%s", Platform_PrefPath(), JB_KEYS_FILE);
     return path;
 }
 

@@ -1,6 +1,5 @@
 /* Host layer for the port.  It stands in for JumpyBall.exe's GAPI path
-   (Gfx_CreateBackBuffer 0x00021698, Gfx_Present 0x000126fc) and is the only
-   file allowed to know about SDL. */
+   (Gfx_CreateBackBuffer 0x00021698, Gfx_Present 0x000126fc). */
 #ifndef JB_PLATFORM_H
 #define JB_PLATFORM_H
 
@@ -53,6 +52,7 @@ void Platform_Delay(unsigned ms);
 #define JB_MUSIC_VOLUME_MAX 0x40
 
 int Platform_AudioInit(void);
+void Platform_AudioPause(int pause);
 int Platform_SoundLoad(int slot, const char *path, int volume);
 void Platform_SoundPlay(int slot);
 void Platform_SoundMasterVolume(int volume);
@@ -62,8 +62,15 @@ void Platform_MusicMasterVolume(int volume);
 void Platform_AudioShutdown(void);
 
 /* Directory the running executable lives in, with a trailing separator. */
-/* Directory the running executable lives in, with a trailing separator. */
 const char *Platform_BasePath(void);
+
+const char *Platform_PrefPath(void);
+
+int Platform_FileExists(const char *path);
+
+unsigned char *Platform_ReadFile(const char *path, long *out_len);
+
+int Platform_TouchActive(void);
 
 void Platform_ShowError(const char *title, const char *text);
 

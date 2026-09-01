@@ -13,16 +13,6 @@ static char jb_root[JB_PATH_MAX];
 static char jb_path[JB_PATH_MAX];
 static char jb_fail[4 * JB_PATH_MAX];
 
-static int FileExists(const char *path)
-{
-    FILE *fp = fopen(path, "rb");
-
-    if (fp == NULL)
-        return 0;
-    fclose(fp);
-    return 1;
-}
-
 static void NoteFailure(const char *path)
 {
     size_t n = strlen(jb_fail);
@@ -36,7 +26,7 @@ static int TryRoot(const char *base, const char *sub)
     char probe[JB_PATH_MAX];
     size_t n;
 
-    if (base == NULL || base[0] == '\0')
+    if (base == NULL)
         return 0;
 
     snprintf(jb_root, sizeof jb_root, "%s%s", base, sub);
@@ -48,7 +38,7 @@ static int TryRoot(const char *base, const char *sub)
     }
 
     snprintf(probe, sizeof probe, "%sBITMAP/%d.bmp", jb_root, JB_RES_FONT);
-    if (FileExists(probe))
+    if (Platform_FileExists(probe))
         return 1;
 
     NoteFailure(probe);
