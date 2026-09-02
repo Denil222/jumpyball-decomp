@@ -160,8 +160,13 @@ jobs:
 
       - name: Install mingw-w64 and Wine
         run: |
+          # The wine command comes from the "wine" package; "wine64" ships no
+          # binaries of its own.  Creating a prefix also runs the 32-bit
+          # rundll32 over wine.inf, so the i386 side has to be there or the
+          # prefix is left half-built and every later run fails.
+          sudo dpkg --add-architecture i386
           sudo apt-get update
-          sudo apt-get install -y gcc-mingw-w64-x86-64 wine64
+          sudo apt-get install -y gcc-mingw-w64-x86-64 wine wine32:i386 wine64 xvfb
 
       - name: Build
         run: MINGW_PREFIX=x86_64-w64-mingw32 sh tools/build_win32.sh
@@ -170,11 +175,19 @@ jobs:
         run: |
           cd build-win32
           export WINEPREFIX="$PWD/.wine"
-          export WINEDEBUG=-all
-          # The GDI backend draws into a DIB section and only BitBlts it to the
-          # window, so the frame dump is identical with or without a display.
+          export WINEARCH=win64
+          # Keep err: messages; only the fixme noise is worth hiding here.
+          export WINEDEBUG=fixme-all
+          # Build the prefix in its own step and wait for the server to exit,
+          # so a first-run failure is reported as such instead of surfacing as
+          # a confusing exit code from the game.
+          xvfb-run -a wineboot --init
+          wineserver -w
+          # Platform_Init really does call CreateWindowExW, GetDC and
+          # SetForegroundWindow, so hand it an X server rather than trusting
+          # Wine's null display driver to fake all three.
           set +e
-          timeout 180 wine jumpyball.exe 1 frame.raw
+          xvfb-run -a timeout 180 wine jumpyball.exe 1 frame.raw
           rc=$?
           set -e
           echo "jumpyball exit code: $rc"
