@@ -1,6 +1,8 @@
 build/
 build-cmake/
 build-android/
+build-win32/
+build-wince/
 dist/
 *.obj
 *.exe

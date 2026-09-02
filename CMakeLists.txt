@@ -11,11 +11,16 @@ option(JUMPYBALL_WARNINGS "Enable the full warning set" ON)
 option(JUMPYBALL_BUILD_TOOLS "Build tools/modtest" OFF)
 option(JUMPYBALL_COPY_ASSETS "Copy BITMAP/Sounds/Musics next to the binary" ON)
 
+# sdl2 is the portable backend (jb_platform_sdl2.c).  win32 is the native
+# Win32 / Windows CE one (jb_platform_win32.c): GDI for the screen, waveOut
+# for sound, no SDL2 anywhere.
+set(JUMPYBALL_BACKEND "sdl2" CACHE STRING "Host backend: sdl2 or win32")
+set_property(CACHE JUMPYBALL_BACKEND PROPERTY STRINGS sdl2 win32)
+
 set(JUMPYBALL_SOURCES
     jb_appassets.c
     jb_assets.c
     jb_audio.c
-    jb_audio_sdl2.c
     jb_ball.c
     jb_bmp.c
     jb_gfx.c
@@ -26,11 +31,9 @@ set(JUMPYBALL_SOURCES
     jb_menu.c
     jb_mod.c
     jb_mod_effects.c
-    jb_platform_sdl2.c
     jb_player.c
     jb_stage.c
     jb_text.c
-    jb_touch_sdl2.c
     jb_track.c
     jb_trackrow_forest.c
     jb_trackrow_grass.c
@@ -38,38 +41,65 @@ set(JUMPYBALL_SOURCES
     jb_trackrow_sky.c
     jb_trackrow_tiled.c)
 
-find_package(SDL2 CONFIG QUIET)
-if(NOT SDL2_FOUND)
-    find_package(SDL2 QUIET)
-endif()
-if(NOT SDL2_FOUND)
-    find_package(PkgConfig QUIET)
-    if(PkgConfig_FOUND)
-        pkg_check_modules(SDL2 IMPORTED_TARGET sdl2)
+if(JUMPYBALL_BACKEND STREQUAL "win32")
+    if(NOT WIN32)
+        message(FATAL_ERROR
+                "JUMPYBALL_BACKEND=win32 needs a Windows target.  Cross-compile "
+                "with -DCMAKE_TOOLCHAIN_FILE=tools/toolchain-mingw-w64.cmake, or "
+                "build the Windows CE binary with tools/build_wince.sh.")
     endif()
-endif()
-if(NOT SDL2_FOUND)
-    message(FATAL_ERROR
-            "SDL2 not found.  Install libsdl2-dev / sdl2 / vcpkg's sdl2, or pass "
-            "-DCMAKE_PREFIX_PATH=<sdl2 prefix>.")
+    list(APPEND JUMPYBALL_SOURCES jb_platform_win32.c jb_audio_win32.c)
+elseif(JUMPYBALL_BACKEND STREQUAL "sdl2")
+    list(APPEND JUMPYBALL_SOURCES jb_platform_sdl2.c jb_audio_sdl2.c
+                                  jb_touch_sdl2.c)
+
+    find_package(SDL2 CONFIG QUIET)
+    if(NOT SDL2_FOUND)
+        find_package(SDL2 QUIET)
+    endif()
+    if(NOT SDL2_FOUND)
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(SDL2 IMPORTED_TARGET sdl2)
+        endif()
+    endif()
+    if(NOT SDL2_FOUND)
+        message(FATAL_ERROR
+                "SDL2 not found.  Install libsdl2-dev / sdl2 / vcpkg's sdl2, pass "
+                "-DCMAKE_PREFIX_PATH=<sdl2 prefix>, or build the native Windows "
+                "backend with -DJUMPYBALL_BACKEND=win32.")
+    endif()
+else()
+    message(FATAL_ERROR "JUMPYBALL_BACKEND must be sdl2 or win32")
 endif()
 
 add_executable(jumpyball WIN32 ${JUMPYBALL_SOURCES})
 
-if(TARGET SDL2::SDL2)
-    target_link_libraries(jumpyball PRIVATE SDL2::SDL2)
-    if(TARGET SDL2::SDL2main)
-        target_link_libraries(jumpyball PRIVATE SDL2::SDL2main)
+if(JUMPYBALL_BACKEND STREQUAL "win32")
+    target_compile_definitions(jumpyball PRIVATE JB_BACKEND_WIN32)
+    target_link_libraries(jumpyball PRIVATE gdi32 user32 winmm)
+    # The WIN32 target property asks for /SUBSYSTEM:WINDOWS, and MSVC then
+    # looks for WinMain.  There is no SDL2main to supply one here, so point the
+    # linker back at the CRT entry that calls main().
+    if(MSVC)
+        target_link_options(jumpyball PRIVATE /ENTRY:mainCRTStartup)
     endif()
-elseif(TARGET PkgConfig::SDL2)
-    target_link_libraries(jumpyball PRIVATE PkgConfig::SDL2)
 else()
-    target_include_directories(jumpyball PRIVATE ${SDL2_INCLUDE_DIRS})
-    target_link_libraries(jumpyball PRIVATE ${SDL2_LIBRARIES})
-endif()
+    if(TARGET SDL2::SDL2)
+        target_link_libraries(jumpyball PRIVATE SDL2::SDL2)
+        if(TARGET SDL2::SDL2main)
+            target_link_libraries(jumpyball PRIVATE SDL2::SDL2main)
+        endif()
+    elseif(TARGET PkgConfig::SDL2)
+        target_link_libraries(jumpyball PRIVATE PkgConfig::SDL2)
+    else()
+        target_include_directories(jumpyball PRIVATE ${SDL2_INCLUDE_DIRS})
+        target_link_libraries(jumpyball PRIVATE ${SDL2_LIBRARIES})
+    endif()
 
-if(WIN32)
-    target_link_libraries(jumpyball PRIVATE shell32)
+    if(WIN32)
+        target_link_libraries(jumpyball PRIVATE shell32)
+    endif()
 endif()
 
 if(MSVC)

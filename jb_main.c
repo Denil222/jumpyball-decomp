@@ -13,7 +13,11 @@
 #include "jb_track.h"
 #include "jb_trackrow.h"
 
+#ifndef JB_BACKEND_WIN32
+/* SDL2 renames main to SDL_main on Windows and Android.  The native Win32
+   backend in jb_platform_win32.c links no SDL at all and needs no shim. */
 #include <SDL_main.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -171,7 +175,7 @@ int main(int argc, char **argv)
     if (!Platform_Init(JB_VIEW_W, JB_VIEW_H, scale, "JumpyBall port")) {
         char msg[JB_MSG_MAX];
 
-        snprintf(msg, sizeof msg, "SDL could not open the window:\n\n%s",
+        snprintf(msg, sizeof msg, "Could not open the window:\n\n%s",
                  Platform_LastError());
         Platform_ShowError("JumpyBall", msg);
         Platform_Shutdown();
@@ -181,12 +185,20 @@ int main(int argc, char **argv)
 
     if (!Assets_Init()) {
         char msg[JB_MSG_MAX];
+        /* Windows CE has no process environment, so pointing the player at
+           JUMPYBALL_ASSETS there would be advice they cannot act on. */
+#ifdef JB_WINCE
+        const char *hint = "Copy the BITMAP, Sounds and Musics folders next to\n"
+                           "jumpyball.exe.";
+#else
+        const char *hint = "Copy the BITMAP and Sounds folders next to jumpyball.exe,\n"
+                           "or set JUMPYBALL_ASSETS to the folder that holds them.";
+#endif
 
         snprintf(msg, sizeof msg,
                  "JumpyBall cannot find its assets.\n\nLooked for BITMAP/%d.bmp in:\n%s\n"
-                 "Copy the BITMAP and Sounds folders next to jumpyball.exe,\n"
-                 "or set JUMPYBALL_ASSETS to the folder that holds them.",
-                 JB_RES_FONT, Assets_FailureText());
+                 "Install directory from: %s\n\n%s",
+                 JB_RES_FONT, Assets_FailureText(), Platform_BaseOrigin(), hint);
         Platform_ShowError("JumpyBall", msg);
         Platform_Shutdown();
         return 1;
