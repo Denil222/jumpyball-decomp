@@ -5,6 +5,14 @@
 
 #include "jb_gfx.h"
 
+/* Windows CE, whether the compiler is cegcc/mingw32ce (UNDER_CE) or a
+   Microsoft embedded SDK (_WIN32_WCE).  It gates the places where CE is not a
+   subset of Win32: no process environment, no GdiFlush, a full-screen window
+   instead of a sized one. */
+#if defined(_WIN32_WCE) || defined(UNDER_CE)
+#define JB_WINCE 1
+#endif
+
 enum {
     JB_KEY_LEFT,
     JB_KEY_RIGHT,
@@ -63,6 +71,12 @@ void Platform_AudioShutdown(void);
 
 /* Directory the running executable lives in, with a trailing separator. */
 const char *Platform_BasePath(void);
+
+/* How Platform_BasePath chose that directory, for the assets-missing dialog.
+   On a cut-down Windows CE image GetModuleFileName can fail, and then every
+   probe path looks alike whichever step produced it.  Only the native backend
+   has more than one way to answer, so the SDL2 one reports a fixed string. */
+const char *Platform_BaseOrigin(void);
 
 const char *Platform_PrefPath(void);
 

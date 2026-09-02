@@ -29,6 +29,10 @@ jobs:
         run: |
           sdl=$(pkg-config --cflags sdl2 | sed 's/-I/-isystem /g')
           for f in *.c; do
+            # jb_platform_win32.c and jb_audio_win32.c include windows.h, which
+            # this host has no copy of, and the Windows SDK headers are not C89
+            # anyway.  The windows-native job below compiles them for real.
+            case "$f" in *_win32.c) continue;; esac
             gcc -std=c89 -pedantic-errors -Wall -Wextra $sdl -c "$f" -o /dev/null
           done
 
@@ -122,6 +126,23 @@ jobs:
             exit 1
           }
 
+      # The same sources with JUMPYBALL_BACKEND=win32: GDI and waveOut, no SDL2.
+      # Build only - the runner has no interactive desktop to present to.
+      - name: Build the native Win32 backend
+        run: |
+          cmake -S . -B build-native -A ${{ matrix.platform }} `
+            -DJUMPYBALL_BACKEND=win32
+          cmake --build build-native --config Release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jumpyball-windows-native-${{ matrix.arch }}
+          path: |
+            build-native/Release/jumpyball.exe
+            build-native/Release/BITMAP
+            build-native/Release/Sounds
+            build-native/Release/Musics
+
       - uses: actions/upload-artifact@v4
         with:
           name: jumpyball-windows-${{ matrix.arch }}
@@ -131,6 +152,48 @@ jobs:
             build/Release/BITMAP
             build/Release/Sounds
             build/Release/Musics
+
+  windows-native:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mingw-w64 and Wine
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-x86-64 wine64
+
+      - name: Build
+        run: MINGW_PREFIX=x86_64-w64-mingw32 sh tools/build_win32.sh
+
+      - name: Headless frame dump under Wine
+        run: |
+          cd build-win32
+          export WINEPREFIX="$PWD/.wine"
+          export WINEDEBUG=-all
+          # The GDI backend draws into a DIB section and only BitBlts it to the
+          # window, so the frame dump is identical with or without a display.
+          set +e
+          timeout 180 wine jumpyball.exe 1 frame.raw
+          rc=$?
+          set -e
+          echo "jumpyball exit code: $rc"
+          test "$rc" = 0
+          expected=$((240 * 320 * 2))
+          actual=$(stat -c%s frame.raw)
+          test "$actual" = "$expected" || {
+            echo "frame.raw is $actual bytes, expected $expected"
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jumpyball-windows-native-mingw
+          path: |
+            build-win32/jumpyball.exe
+            build-win32/BITMAP
+            build-win32/Sounds
+            build-win32/Musics
 
   android:
     runs-on: ubuntu-24.04

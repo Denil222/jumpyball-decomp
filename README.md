@@ -1,6 +1,8 @@
 # jumpyball-decomp
 
-Порт игры JumpyBall (Windows Mobile / Pocket PC, экран 240x320) на C89 + SDL2.
+Порт игры JumpyBall (Windows Mobile / Pocket PC, экран 240x320) на C89.
+Хост-слой сменный: SDL2 (Windows, Linux, Android) или нативный Win32 API
+(Windows и Windows CE, GDI + waveOut, вообще без SDL2).
 
 Логика восстановлена реверс-инжинирингом оригинальных `JumpyBall.exe` и `hss.dll`.
 Код порта - собственный; из оригинальной поставки в репозиторий входят только
@@ -20,7 +22,7 @@
 
 ## Сборка
 
-Код - ANSI C (C89). Нужны компилятор C и SDL2.
+Код - ANSI C (C89). Нужен компилятор C и, для бэкенда по умолчанию, SDL2.
 
 ### CMake (Windows, Linux, куда угодно)
 
@@ -45,6 +47,11 @@ Studio Build Tools) с `-std=c89 -pedantic-errors -Wall`. Компоновки �
 проверка того, что код не опирается на расширения MSVC и соберётся другим
 компилятором, в том числе gcc/clang под Linux.
 
+`jb_platform_win32.c` и `jb_audio_win32.c` из этой проверки исключены: они
+тянут `windows.h`, а заголовки SDK сами по себе не C89 (`inline`, `long long`,
+безымянные union), так что `-pedantic-errors` срабатывает внутри SDK, не
+доходя до нашего кода. Сам код этих двух файлов - тот же C89.
+
 ### MSVC напрямую
 
 Пути к MSVC и SDL2 заданы в начале `build.cmd`:
@@ -61,6 +68,63 @@ build.cmd
 ```
 
 Результат - `build\jumpyball.exe` вместе с `SDL2.dll` и ассетами.
+
+### Нативный Windows / Windows CE (без SDL2)
+
+Весь платформенно-зависимый код сходится в одном заголовке `jb_platform.h`,
+поэтому кроме SDL2-бэкенда есть второй, нативный: `jb_platform_win32.c` (окно,
+ввод и вывод кадра через GDI) и `jb_audio_win32.c` (звук через waveOut). SDL2
+при этом не нужен вообще - линкуются только `gdi32`, `user32` и `winmm`.
+Выбирается опцией `-DJUMPYBALL_BACKEND=win32` (по умолчанию `sdl2`):
+
+```
+cmake -S . -B build-win32 -DCMAKE_BUILD_TYPE=Release -DJUMPYBALL_BACKEND=win32
+cmake --build build-win32 --config Release
+```
+
+Кадр рисуется в DIB-секцию 16bpp RGB565 (`CreateDIBSection` с `BI_BITFIELDS`,
+сверху вниз) и выводится в окно через `BitBlt`, а при масштабе больше 1 -
+`StretchBlt`. Это тот же путь, что у оригинала через GAPI, только буфер отдаёт
+GDI, а не драйвер экрана. Звук - четыре голоса WAV и музыка `.tkm`, смешанные
+своим микшером и отданные в waveOut отдельным потоком-кормильцем; свой разбор
+RIFF заменяет `SDL_LoadWAV`.
+
+Кросс-сборка с Linux - mingw-w64:
+
+```
+sudo apt-get install gcc-mingw-w64-i686
+sh tools/build_win32.sh
+```
+
+Для 64 бит - `MINGW_PREFIX=x86_64-w64-mingw32 sh tools/build_win32.sh`. Скрипт
+зовёт CMake с `tools/toolchain-mingw-w64.cmake`; результат -
+`build-win32/jumpyball.exe`, запускается и под Wine.
+
+#### Windows CE
+
+Для Windows CE нативный бэкенд - единственный вариант: SDL2 под CE нет.
+Собирается cegcc / mingw32ce:
+
+```
+CEGCC=/opt/mingw32ce TARGET=arm-mingw32ce sh tools/build_wince.sh
+```
+
+`TARGET` - `arm-mingw32ce` или `i386-mingw32ce`. Готовый каталог `build-wince/`
+копируется на устройство целиком (например в `\Program Files\JumpyBall`): игра
+ищет `BITMAP` / `Sounds` / `Musics` рядом с собой. Из зависимостей у неё только
+`coredll.dll`.
+
+Отличия ветки CE собраны под макросом `JB_WINCE` (`jb_platform.h`):
+
+- окно всегда во весь экран (`WS_POPUP`), масштаб подбирается автоматически;
+  панель задач и кнопка SIP убираются через `SHFullScreen`, который берётся из
+  `aygshell.dll` динамически - на образах без неё игра просто работает как есть
+- у CE только широкий API, поэтому все вызовы в бэкенде - `...W`, а узкие
+  строки расширяются на входе; в путях `/` заменяется на `\`
+- у CE нет окружения процесса и `getenv` в coredll, поэтому переменная
+  `JUMPYBALL_ASSETS` там не читается
+- собирается как `gnu89`, а не строгий `c89`: `inline` используется в
+  `kfuncs.h` самой cegcc
 
 ### Android (APK)
 
@@ -82,11 +146,14 @@ cd build-android && ./gradlew assembleDebug
 
 ### Сборки в CI
 
-`.github/workflows/build.yml` собирает и прогоняет игру на пяти конфигурациях:
-Linux x86_64 и arm64 (плюс проверка на строгий C89), Windows x86 и ARM64,
-Android APK. Настольные сборки проверяются выгрузкой кадра в headless-режиме -
-файл обязан быть ровно 240*320*2 байта, - APK проверяется на наличие
-`libmain.so` / `libSDL2.so` для всех четырёх ABI и ассетов внутри архива.
+`.github/workflows/build.yml` собирает и прогоняет игру на шести
+конфигурациях: Linux x86_64 и arm64 (плюс проверка на строгий C89), Windows x86
+и ARM64 (обоими бэкендами - SDL2 и нативным), кросс-сборка нативного бэкенда
+mingw-w64 с прогоном под Wine, Android APK. Настольные сборки проверяются
+выгрузкой кадра в headless-режиме - файл обязан быть ровно 240*320*2 байта, -
+APK проверяется на наличие `libmain.so` / `libSDL2.so` для всех четырёх ABI и
+ассетов внутри архива. Сборка под Windows CE в CI не гоняется: cegcc нет в
+пакетах ни одного из раннеров.
 
 ## Управление
 
@@ -108,6 +175,12 @@ Android APK. Настольные сборки проверяются выгру
 кодировке «база 1000 + смещение 100», а коды VK не совпадают с кодами SDL, так
 что переносить оригинальный формат было бы бессмысленно. Файл с непривязанной
 или повторяющейся клавишей отбрасывается, и берутся значения по умолчанию.
+
+В нативном бэкенде формат `keys.cfg` тот же, но коды в нём - VK (`VK_LEFT`,
+`VK_SPACE` и так далее), как в оригинале, а не коды SDL. Два файла между
+бэкендами не переносятся. Сенсорной панели в нативном бэкенде нет: она
+нарисована через `SDL_Renderer` в `jb_touch_sdl2.c`, а у КПК под управление
+есть свои аппаратные клавиши.
 
 ## Чекпоинты
 
@@ -145,6 +218,13 @@ Android APK. Настольные сборки проверяются выгру
 запуск - `modtest.exe <in.tkm> <out.wav> [volume] [loop]`.
 
 `c89check.cmd` - проверка на строгий C89 (см. раздел «Сборка»).
+
+`build_win32.sh` - кросс-сборка нативного (без SDL2) `jumpyball.exe` через
+mingw-w64, `build_wince.sh` - то же для Windows CE через cegcc,
+`toolchain-mingw-w64.cmake` - файл тулчейна CMake, которым пользуется первый из
+них.
+
+`android_prepare.sh` - сборка дерева Gradle для APK (см. раздел «Сборка»).
 
 ## Модификация уровней.
 
